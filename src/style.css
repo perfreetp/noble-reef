@@ -1,0 +1,47 @@
+:root {
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0c0805;
+  overflow: hidden;
+}
+body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+#stage-root {
+  position: relative;
+  min-width: 0;
+  height: 100vh;
+}
+#stage-root::after {
+  /* PiP 灯幕的描边(对应左下角纯灯幕预览) */
+  content: '灯幕光斑';
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: min(240px, 42vw);
+  aspect-ratio: 1;
+  border: 2px solid #6b5136;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .6);
+  color: #c9a878;
+  font-size: 11px;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  text-shadow: 0 1px 3px #000;
+}
+#panel { height: 100vh; }
+@media (max-width: 860px) {
+  body { grid-template-columns: 1fr; grid-template-rows: 55vh 45vh; }
+  #stage-root, #panel { height: auto; }
+  #panel { height: 45vh; }
+}
