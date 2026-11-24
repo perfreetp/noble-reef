@@ -1,0 +1,22 @@
+{
+  "name": "grind-skatepark-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "浏览器中的滑板场地几何建模工具 — three.js + manifold-3d",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174",
+    "test": "node --test tests/geometry.test.mjs",
+    "test:e2e": "node tests/e2e.mjs"
+  },
+  "dependencies": {
+    "manifold-3d": "^3.5.5",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1",
+    "vite": "^7.3.8"
+  }
+}
