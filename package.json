@@ -1,0 +1,35 @@
+{
+  "name": "bonsai-studio",
+  "version": "1.0.0",
+  "description": "树桩盆景造型编辑器 · TypeScript + Web Components + three.js + manifold-3d",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/perfreetp/noble-reef.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/perfreetp/noble-reef/issues"
+  },
+  "homepage": "https://github.com/perfreetp/noble-reef#readme",
+  "dependencies": {
+    "manifold-3d": "^3.5.5",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "playwright": "^1.65.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
