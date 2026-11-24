@@ -1,0 +1,293 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 13px;
+  color: #d7dce4;
+  background: #13151b;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #1b1e26;
+  border-bottom: 1px solid #2a2e3a;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.badge {
+  background: #262b38;
+  border: 1px solid #343a4a;
+  border-radius: 10px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #9fb4d8;
+}
+
+.loading {
+  color: #f0c060;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 300px;
+  min-width: 300px;
+  overflow-y: auto;
+  background: #171a21;
+  border-right: 1px solid #2a2e3a;
+  padding: 10px 12px;
+}
+
+.sidebar section {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #232734;
+}
+
+.sidebar h3 {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b94a7;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+button {
+  background: #2a3040;
+  color: #d7dce4;
+  border: 1px solid #3a4154;
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+button:hover {
+  background: #343c52;
+}
+
+select,
+input[type="color"] {
+  background: #222633;
+  color: #d7dce4;
+  border: 1px solid #3a4154;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  max-width: 100%;
+}
+
+input[type="color"] {
+  padding: 1px 2px;
+  height: 26px;
+  width: 42px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0;
+  cursor: pointer;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.slider-row span:first-child {
+  min-width: 44px;
+  color: #9aa3b5;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.slider-row span:last-child {
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  color: #7c8496;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.mol-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mol-item {
+  background: #1e222d;
+  border: 1px solid #2c3242;
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+.mol-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.mol-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.del {
+  padding: 0 7px;
+  border-radius: 5px;
+  color: #e08080;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mol-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  color: #8b94a7;
+  font-size: 12px;
+}
+
+.viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.viewport canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b94a7;
+  background: rgba(15, 17, 22, 0.6);
+  pointer-events: none;
+}
+
+.error-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4a2326;
+  border: 1px solid #7a3a3e;
+  color: #f0b8b8;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  max-width: 80%;
+}
+
+.atom-info {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  background: rgba(24, 27, 35, 0.92);
+  border: 1px solid #333a4c;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 230px;
+  max-width: 320px;
+  backdrop-filter: blur(4px);
+}
+
+.atom-info-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.el-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #31405e;
+  border: 1px solid #4a5c85;
+  font-weight: 700;
+}
+
+.atom-pos {
+  color: #8b94a7;
+  font-size: 12px;
+  margin: 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.atom-info table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.atom-info th,
+.atom-info td {
+  text-align: left;
+  padding: 3px 6px;
+  border-bottom: 1px solid #2a3040;
+}
+
+.atom-info th {
+  color: #8b94a7;
+  font-weight: 500;
+}
