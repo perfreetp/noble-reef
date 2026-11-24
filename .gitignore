@@ -16,3 +16,7 @@ node_modules/
 __pycache__/
 .venv/
 venv/
+.smoketest/*.png
+.smoketest/lightpath-*.json
+!/.smoketest/package.json
+!/.smoketest/package-lock.json

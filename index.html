@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>跑酷路径光带编辑器</title>
+<style>
+  :root{
+    --bg:#070a12; --panel:rgba(13,18,32,.82); --panel-solid:#0d1220; --line:#1e2942;
+    --fg:#e6edf7; --sub:#8a97b0; --accent:#35e6ff; --accent2:#ff4df0; --warn:#ffb454; --danger:#ff5d6c;
+    --ok:#46e08a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;overflow:hidden}
+  #app{position:fixed;inset:0}
+  canvas{display:block;touch-action:none}
+
+  /* ---------- 顶部标题 / 状态 ---------- */
+  #topbar{position:fixed;top:14px;left:16px;z-index:20;pointer-events:none;
+    text-shadow:0 2px 12px rgba(0,0,0,.8)}
+  #topbar h1{margin:0;font-size:17px;letter-spacing:1px;font-weight:700;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #topbar .hint{margin-top:4px;font-size:12px;color:var(--sub)}
+  #stats{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:20;
+    display:flex;gap:10px;pointer-events:none}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:5px 12px;font-size:12px;color:var(--sub);backdrop-filter:blur(10px)}
+  .chip b{color:var(--fg);font-weight:600}
+  .chip.good b{color:var(--ok)} .chip.warn b{color:var(--warn)} .chip.danger b{color:var(--danger)}
+
+  /* ---------- 右侧控制面板 ---------- */
+  #panel{position:fixed;top:14px;right:14px;bottom:14px;z-index:20;width:300px;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    backdrop-filter:blur(14px);display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 18px 60px rgba(0,0,0,.55)}
+  #panel.collapsed .panel-body{display:none}
+  #panelHead{display:flex;align-items:center;justify-content:space-between;
+    padding:13px 15px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+  #panelHead span{font-size:13px;font-weight:700;letter-spacing:1px}
+  #collapseBtn{background:none;border:none;color:var(--sub);font-size:14px;cursor:pointer;padding:2px 6px}
+  .panel-body{overflow-y:auto;padding:6px 15px 14px;flex:1}
+  .panel-body::-webkit-scrollbar{width:6px}
+  .panel-body::-webkit-scrollbar-thumb{background:#26334f;border-radius:3px}
+  section{padding:12px 0;border-bottom:1px solid rgba(30,41,66,.7)}
+  section:last-child{border-bottom:none}
+  section h2{margin:0 0 10px;font-size:11px;color:var(--accent);letter-spacing:2px;font-weight:700}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0;font-size:12.5px}
+  .row label{color:var(--sub);white-space:nowrap}
+  .row .val{color:var(--fg);font-variant-numeric:tabular-nums;min-width:42px;text-align:right;font-size:12px}
+  input[type=range]{flex:1;accent-color:var(--accent);height:4px;cursor:pointer}
+  input[type=color]{width:46px;height:26px;border:1px solid var(--line);border-radius:6px;
+    background:none;padding:1px;cursor:pointer}
+  .seg{display:flex;gap:6px;flex:1}
+  .seg button{flex:1;padding:6px 0;font-size:12px;border:1px solid var(--line);background:#101729;
+    color:var(--sub);border-radius:8px;cursor:pointer;transition:.15s}
+  .seg button.on{border-color:var(--accent);color:var(--accent);background:rgba(53,230,255,.1)}
+  .switch{position:relative;width:40px;height:22px;flex:none}
+  .switch input{display:none}
+  .switch i{position:absolute;inset:0;background:#26334f;border-radius:999px;transition:.2s;cursor:pointer}
+  .switch i::after{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;
+    background:#8a97b0;transition:.2s}
+  .switch input:checked + i{background:rgba(53,230,255,.35)}
+  .switch input:checked + i::after{left:21px;background:var(--accent)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{padding:9px 6px;font-size:12.5px;border:1px solid var(--line);background:#101729;color:var(--fg);
+    border-radius:9px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+  .btn.primary{background:linear-gradient(135deg,rgba(53,230,255,.18),rgba(255,77,240,.18));
+    border-color:rgba(53,230,255,.5)}
+  #saveState{font-size:11px;color:var(--sub);margin-top:10px;display:flex;align-items:center;gap:6px}
+  #saveDot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+
+  /* ---------- Toast ---------- */
+  #toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:40;
+    background:var(--panel-solid);border:1px solid var(--line);color:var(--fg);
+    padding:9px 18px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;
+    box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{border-color:var(--danger);color:var(--danger)}
+
+  @media (max-width:760px){
+    #panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:46vh}
+    #stats{display:none}
+    #topbar .hint{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="topbar">
+  <h1>跑酷路径光带编辑器</h1>
+  <div class="hint">点击场景添加控制点 · 拖动控制点微调 · 双击控制点删除 · Ctrl+Z 撤销 · 右键平移 / 滚轮缩放</div>
+</div>
+
+<div id="stats">
+  <div class="chip" id="chipFps">FPS <b>--</b></div>
+  <div class="chip" id="chipPoints">控制点 <b>0/80</b></div>
+  <div class="chip">细分 <b>20 段/节</b></div>
+</div>
+
+<div id="panel">
+  <div id="panelHead"><span>参数面板</span><button id="collapseBtn" title="折叠/展开">▼</button></div>
+  <div class="panel-body">
+    <section>
+      <h2>路径绘制</h2>
+      <div class="btns">
+        <button class="btn" id="btnUndo">撤销 (Ctrl+Z)</button>
+        <button class="btn" id="btnResetView">重置视角</button>
+        <button class="btn danger" id="btnClear" style="grid-column:1/3">清空全部控制点</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>光带几何</h2>
+      <div class="row">
+        <label>宽度档位</label>
+        <div class="seg" id="segWidth">
+          <button data-v="0">窄</button><button data-v="1">标准</button><button data-v="2">宽</button>
+        </div>
+      </div>
+      <div class="row"><label>发光强度</label>
+        <input type="range" id="rIntensity" min="0.2" max="4" step="0.05" value="1.15">
+        <span class="val" id="vIntensity">1.15</span></div>
+      <div class="row"><label>起点颜色</label><input type="color" id="cStart" value="#00e5ff"></div>
+      <div class="row"><label>终点颜色</label><input type="color" id="cEnd" value="#ff3df0"></div>
+    </section>
+
+    <section>
+      <h2>后处理泛光</h2>
+      <div class="row"><label>泛光阈值</label>
+        <input type="range" id="rThreshold" min="0" max="1.5" step="0.01" value="0.35">
+        <span class="val" id="vThreshold">0.35</span></div>
+      <div class="row"><label>泛光强度</label>
+        <input type="range" id="rBloom" min="0" max="3" step="0.01" value="0.9">
+        <span class="val" id="vBloom">0.90</span></div>
+      <div class="row"><label>泛光半径</label>
+        <input type="range" id="rRadius" min="0" max="1.5" step="0.01" value="0.45">
+        <span class="val" id="vRadius">0.45</span></div>
+    </section>
+
+    <section>
+      <h2>遮挡预览</h2>
+      <div class="row"><label>深度遮挡判断</label>
+        <span class="switch"><input type="checkbox" id="swOcclusion" checked><i></i></span></div>
+      <div class="row"><label>被遮挡段亮度</label>
+        <input type="range" id="rOccl" min="0.05" max="1" step="0.01" value="0.12">
+        <span class="val" id="vOccl">0.12</span></div>
+    </section>
+
+    <section>
+      <h2>数据 / 分享</h2>
+      <div class="btns">
+        <button class="btn primary" id="btnExport">导出参数文件</button>
+        <button class="btn primary" id="btnImport">导入参数文件</button>
+      </div>
+      <input type="file" id="fileImport" accept=".json,application/json" hidden>
+      <div id="saveState"><span id="saveDot"></span><span id="saveText">本地自动存档已开启</span></div>
+    </section>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ============================================================
+ * 常量
+ * ==========================================================*/
+const MAX_POINTS = 80;            // 控制点上限
+const SUBDIV = 20;                // 每段曲线细分 20 段
+const WIDTH_LEVELS = [0.8, 1.6, 2.6]; // 三档光带宽度
+const STORAGE_KEY = 'parkour-lightpath-editor-v1';
+const PICK_LAYER = 0;            // 地面/障碍物所在层(深度通道)
+const EDIT_LAYER = 1;            // 光带/控制点所在层(不写入深度纹理)
+
+/* ============================================================
+ * 渲染器 / 场景 / 相机
+ * ==========================================================*/
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a12);
+scene.fog = new THREE.FogExp2(0x070a12, 0.006);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 400);
+camera.position.set(26, 20, 30);
+camera.layers.enable(EDIT_LAYER); // 主相机同时看场景层与编辑层
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 4;
+controls.maxDistance = 120;
+controls.target.set(0, 1.5, 0);
+
+scene.add(new THREE.HemisphereLight(0x8fb4ff, 0x1a1030, 0.75));
+scene.add(new THREE.AmbientLight(0x88a0cc, 0.35));
+const dirLight = new THREE.DirectionalLight(0xbfd4ff, 1.2);
+dirLight.position.set(18, 30, 12);
+scene.add(dirLight);
+const rimLight = new THREE.DirectionalLight(0xff6df5, 0.45);
+rimLight.position.set(-20, 12, -18);
+scene.add(rimLight);
+
+/* ============================================================
+ * 跑酷场景:地面 + 障碍物(全部带 userData.pickable)
+ * ==========================================================*/
+const pickables = [];
+function tagPickable(mesh){ mesh.userData.pickable = true; pickables.push(mesh); return mesh; }
+
+const ground = tagPickable(new THREE.Mesh(
+  new THREE.PlaneGeometry(220, 220),
+  new THREE.MeshStandardMaterial({ color:0x101a30, roughness:0.95, metalness:0.1 })
+));
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+const grid = new THREE.GridHelper(200, 100, 0x2a5a8f, 0x182845);
+grid.material.transparent = true; grid.material.opacity = 0.6;
+scene.add(grid);
+
+const obstacleMat = new THREE.MeshStandardMaterial({ color:0x36456b, roughness:0.55, metalness:0.3 });
+const accentMat   = new THREE.MeshStandardMaterial({ color:0x4a3878, roughness:0.5, metalness:0.35 });
+// 障碍物发光描边线框,强化几何轮廓与遮挡关系的可读性
+const edgeMat = new THREE.LineBasicMaterial({ color:0x5fd0ff, transparent:true, opacity:0.55 });
+const edgeMatAccent = new THREE.LineBasicMaterial({ color:0xff6df0, transparent:true, opacity:0.55 });
+function addBox(x,y,z,w,h,d,mat=obstacleMat,rx=0,ry=0,rz=0){
+  const m = tagPickable(new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat));
+  m.position.set(x,y,z); m.rotation.set(rx,ry,rz); scene.add(m);
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(m.geometry), mat === accentMat ? edgeMatAccent : edgeMat);
+  m.add(edges); // 描边作为子节点,随箱体一起变换
+  return m;
+}
+// 障碍布局:低台 / 高台 / 门洞 / 斜坡 / 浮台
+addBox( 4, 0.55,  3,   3, 1.1, 3);
+addBox(-5, 1.25, -2,   3.5, 2.5, 3.5);
+addBox( 9, 2.0,  -4,   4, 4.0, 1.4);
+addBox( 0, 3.2,  -9,   6, 0.8, 2.2, accentMat);
+addBox(-9, 0.75,  6,   2.5, 1.5, 2.5);
+addBox( 3, 0.45, -12,   8, 0.9, 1.6);
+addBox(-3, 0.5,   9,   1.4, 1.0, 5, obstacleMat, 0, 0.35, 0);
+addBox( 12,0.9,   7,   2.2, 1.8, 2.2, accentMat);
+addBox(-12,2.2,  -7,   2.4, 2.4, 2.4);
+addBox( 7, 1.1,  12,   3, 2.2, 1.2, obstacleMat, 0, -0.5, 0);
+addBox(-14,0.35,  1,   4, 0.7, 1.4);
+// 斜坡(旋转箱体)
+addBox( -2, 0.7, -16,  6, 1.4, 2.5, obstacleMat, -0.38, 0, 0);
+addBox(  6, 0.7,  17,  5, 1.4, 2.5, accentMat,   0.35, 0, 0);
+
+/* ============================================================
+ * 深度通道:单独相机 + 独立 RenderTarget + DepthTexture
+ * 只渲染 PICK_LAYER(场景遮挡物),编辑层光带不参与深度写
+ * ==========================================================*/
+const depthCamera = new THREE.PerspectiveCamera();
+const depthTarget = new THREE.WebGLRenderTarget(1, 1, { type:THREE.HalfFloatType });
+const depthTexture = new THREE.DepthTexture(1, 1);
+depthTexture.type = THREE.UnsignedIntType;
+depthTarget.depthTexture = depthTexture;
+const depthMaterial = new THREE.MeshDepthMaterial();
+
+/* ============================================================
+ * 光带:平滑曲线 + 带状网格,自定义 shader 做深度遮挡压暗
+ * ==========================================================*/
+const ribbonUniforms = {
+  tDepth:          { value: depthTexture },
+  uResolution:     { value: new THREE.Vector2(1,1) },
+  uCameraNear:     { value: camera.near },
+  uCameraFar:      { value: camera.far },
+  uColorStart:     { value: new THREE.Color('#00e5ff') },
+  uColorEnd:       { value: new THREE.Color('#ff3df0') },
+  uIntensity:      { value: 1.6 },
+  uOcclusionOn:    { value: 1 },
+  uOcclusionFactor:{ value: 0.12 }
+};
+const ribbonMat = new THREE.ShaderMaterial({
+  uniforms: ribbonUniforms,
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vViewPosition;
+    void main(){
+      vUv = uv;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vViewPosition = -mv.xyz;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDepth;
+    uniform vec2  uResolution;
+    uniform float uCameraNear, uCameraFar;
+    uniform vec3  uColorStart, uColorEnd;
+    uniform float uIntensity, uOcclusionOn, uOcclusionFactor;
+    varying vec2 vUv;
+    varying vec3 vViewPosition;
+    #include <packing>
+    void main(){
+      // 沿光带长度方向的首尾渐变色
+      vec3 grad = mix(uColorStart, uColorEnd, vUv.x);
+      // 边缘柔化:中心略亮、边缘衰减,形成带状光感而非整片死白
+      float d = abs(vUv.y - 0.5) * 2.0;
+      float edge = 1.0 - smoothstep(0.45, 1.0, d);
+      float core = 1.0 - smoothstep(0.0, 0.7, d);
+      float dim = 1.0;
+      if(uOcclusionOn > 0.5){
+        vec2 depthUv = gl_FragCoord.xy / uResolution;
+        float packed = texture2D(tDepth, depthUv).x;
+        float sceneViewZ = perspectiveDepthToViewZ(packed, uCameraNear, uCameraFar);
+        float sceneDepth = -sceneViewZ;          // 遮挡物在该像素的视空间深度(正值)
+        float myDepth = vViewPosition.z;         // 光带自身深度
+        // 场景物比光带更近 → 被遮挡,带过渡避免硬边闪烁
+        float hidden = 1.0 - smoothstep(myDepth - 0.35, myDepth - 0.05, sceneDepth);
+        dim = mix(1.0, uOcclusionFactor, hidden);
+      }
+      vec3 col = grad * uIntensity * (0.45 + 0.4 * edge + 0.35 * core) * dim;
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+  blending: THREE.AdditiveBlending,
+  transparent: true,
+  depthTest: false,
+  depthWrite: false,
+  side: THREE.DoubleSide
+});
+const ribbon = new THREE.Mesh(new THREE.BufferGeometry(), ribbonMat);
+ribbon.layers.set(EDIT_LAYER);
+ribbon.frustumCulled = false;
+ribbon.renderOrder = 0; // 光带先画,标记(2)/序号(3)后画,保证编辑元素不被光带吞没
+scene.add(ribbon);
+
+/* ============================================================
+ * 控制点标记(球体 + 外环 + 序号 Sprite),仅编辑层可见
+ * ==========================================================*/
+const markerGeo = new THREE.SphereGeometry(0.24, 18, 14);
+const markerRingGeo = new THREE.RingGeometry(0.3, 0.4, 28);
+const markers = [];
+const labelGroup = new THREE.Group();
+labelGroup.layers.set(EDIT_LAYER);
+scene.add(labelGroup);
+
+function makeLabelTexture(text){
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(64,64,52,0,Math.PI*2);
+  g.fillStyle = 'rgba(10,16,30,0.92)'; g.fill();
+  g.lineWidth = 6; g.strokeStyle = '#35e6ff'; g.stroke();
+  g.fillStyle = '#ffffff'; g.font = 'bold 56px Segoe UI, sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, 64, 68);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// 控制点之间的连接折线(编辑辅助线)
+const linkLine = new THREE.Line(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color:0x9fdcff, transparent:true, opacity:0.55 })
+);
+linkLine.layers.set(EDIT_LAYER);
+linkLine.renderOrder = 1;
+scene.add(linkLine);
+function refreshLinkLine(){
+  const n = state.points.length;
+  const arr = new Float32Array(n*3);
+  state.points.forEach((p,i) => arr.set(p, i*3));
+  linkLine.geometry.dispose();
+  linkLine.geometry = new THREE.BufferGeometry();
+  linkLine.geometry.setAttribute('position', new THREE.BufferAttribute(arr,3));
+}
+
+/* ============================================================
+ * 编辑状态 + 本地存档
+ * ==========================================================*/
+const defaultState = () => ({
+  points: [],
+  widthLevel: 1,
+  intensity: 1.15,
+  colorStart: '#00e5ff',
+  colorEnd: '#ff3df0',
+  bloomThreshold: 0.35,
+  bloomStrength: 0.9,
+  bloomRadius: 0.45,
+  occlusion: true,
+  occlusionFactor: 0.12
+});
+let state = defaultState();
+let history = []; // 控制点快照,用于撤销
+
+function demoPoints(){
+  // 首次打开的演示路径:地面 → 低台 → 地面 → 高台 → 门洞下穿过 → 斜坡
+  return [
+    [-16, 0.12, 10], [-10, 0.12, 7.6], [-5.5, 0.12, 5],
+    [4, 1.18, 3], [7.5, 0.12, 0.5], [5.5, 0.12, -3.4],
+    [0.6, 0.12, -7.2], [-2, 0.12, -13.5]
+  ];
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.points)){
+        state = Object.assign(defaultState(), parsed);
+        return true;
+      }
+    }
+  }catch(e){ console.warn('本地存档读取失败', e); }
+  state = defaultState();
+  state.points = demoPoints();
+  return false;
+}
+let saveTimer = 0;
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    document.getElementById('saveText').textContent =
+      '已自动保存 ' + new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById('saveText').textContent = '存档失败(存储已满?)';
+  }
+}
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
+
+function pushHistory(){
+  history.push(state.points.map(p => p.slice()));
+  if(history.length > 50) history.shift();
+}
+
+/* ============================================================
+ * 光带几何重建:Catmull-Rom 平滑 + Parallel-Transport 带状框架
+ * ==========================================================*/
+function rebuildRibbon(){
+  const pts = state.points;
+  const geo = ribbon.geometry;
+  geo.dispose();
+  if(pts.length < 2){
+    ribbon.geometry = new THREE.BufferGeometry();
+    return;
+  }
+  const curve = new THREE.CatmullRomCurve3(
+    pts.map(p => new THREE.Vector3(p[0],p[1],p[2])), false, 'centripetal'
+  );
+  const rings = 1 + SUBDIV * (pts.length - 1);
+  const samples = curve.getSpacedPoints(rings - 1);
+  const width = WIDTH_LEVELS[state.widthLevel];
+  const half = width / 2, lift = 0.09;
+
+  const pos = new Float32Array(rings * 2 * 3);
+  const uv  = new Float32Array(rings * 2 * 2);
+  const idx = [];
+
+  // 平行移动标架:切线 t / 法线 n / 副法线 b,避免剧烈扭转
+  let nPrev = new THREE.Vector3(0,1,0);
+  const up = new THREE.Vector3(0,1,0);
+  for(let i=0;i<rings;i++){
+    const t = curve.getTangentAt(i/(rings-1)).normalize();
+    let n = nPrev.clone().addScaledVector(t, -nPrev.dot(t));
+    if(n.lengthSq() < 1e-6) n = up.clone().addScaledVector(t, -up.dot(t));
+    n.normalize();
+    nPrev = n.clone();
+    const b = new THREE.Vector3().crossVectors(t, n).normalize();
+    const c = samples[i].addScaledVector(n, lift);
+
+    const l = c.clone().addScaledVector(b, -half);
+    const r = c.clone().addScaledVector(b,  half);
+    pos.set([l.x,l.y,l.z, r.x,r.y,r.z], i*6);
+    const u = i/(rings-1);
+    uv.set([u,0, u,1], i*4);
+
+    if(i < rings-1){
+      const a = i*2;
+      idx.push(a, a+1, a+2, a+1, a+3, a+2);
+    }
+  }
+  const ng = new THREE.BufferGeometry();
+  ng.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  ng.setAttribute('uv', new THREE.BufferAttribute(uv,2));
+  ng.setIndex(idx);
+  ng.computeVertexNormals();
+  ribbon.geometry = ng;
+}
+
+/* ============================================================
+ * 控制点标记重建 / 位置刷新
+ * ==========================================================*/
+const tmpColor = new THREE.Color();
+function pointColor(t){
+  tmpColor.copy(ribbonUniforms.uColorStart.value)
+    .lerp(ribbonUniforms.uColorEnd.value, t);
+  return tmpColor;
+}
+function rebuildMarkers(){
+  markers.forEach(m => {
+    scene.remove(m);
+    m.material.dispose();
+    if(m.userData.ring){ m.userData.ring.material.dispose(); }
+  });
+  markers.length = 0;
+  while(labelGroup.children.length){
+    const s = labelGroup.children.pop();
+    s.material.map.dispose(); s.material.dispose();
+  }
+  state.points.forEach((p,i) => {
+    const t = state.points.length > 1 ? i/(state.points.length-1) : 0;
+    const col = pointColor(t).clone();
+    // 白色内核保证在高亮光带之上仍清晰可辨,外环使用渐变色
+    const mat = new THREE.MeshBasicMaterial({ color:0xffffff, depthTest:true });
+    const m = new THREE.Mesh(markerGeo, mat);
+    m.layers.set(EDIT_LAYER);
+    m.userData.index = i;
+    m.renderOrder = 2;
+    m.position.set(p[0],p[1],p[2]);
+    const ring = new THREE.Mesh(markerRingGeo,
+      new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide,
+        transparent:true, opacity:0.9, depthTest:true }));
+    ring.renderOrder = 2;
+    ring.rotation.x = -Math.PI/2; // 环平躺到 XZ 平面,略抬高避免 Z-fighting
+    ring.position.y = 0.02;
+    m.add(ring);
+    m.userData.ring = ring;
+    scene.add(m); markers.push(m);
+
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeLabelTexture(String(i+1)), depthTest:true, transparent:true
+    }));
+    sprite.layers.set(EDIT_LAYER);
+    sprite.renderOrder = 3;
+    sprite.scale.setScalar(0.85);
+    sprite.position.set(p[0], p[1]+0.68, p[2]);
+    sprite.userData.isLabel = true;
+    labelGroup.add(sprite);
+  });
+  refreshLinkLine();
+}
+function refreshMarkers(){
+  // 数量一致时只更新位置/颜色(拖动微调路径)
+  if(markers.length !== state.points.length){ rebuildMarkers(); return; }
+  state.points.forEach((p,i) => {
+    const t = state.points.length > 1 ? i/(state.points.length-1) : 0;
+    markers[i].position.set(p[0],p[1],p[2]);
+    markers[i].userData.ring.material.color.copy(pointColor(t));
+    labelGroup.children[i].position.set(p[0], p[1]+0.68, p[2]);
+  });
+  refreshLinkLine();
+}
+function rebuildAll(){ rebuildRibbon(); refreshMarkers(); updatePointChip(); }
+
+/* ============================================================
+ * 后处理:EffectComposer + UnrealBloom
+ * ==========================================================*/
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  state.bloomStrength, state.bloomRadius, state.bloomThreshold
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+/* ============================================================
+ * 射线拾取
+ * ==========================================================*/
+const raycaster = new THREE.Raycaster();
+raycaster.layers.enable(EDIT_LAYER); // 标记在编辑层,需显式启用才能被射线拾取
+const pointerNdc = new THREE.Vector2();
+function setRay(e){
+  const r = renderer.domElement.getBoundingClientRect();
+  pointerNdc.x = ((e.clientX-r.left)/r.width)*2-1;
+  pointerNdc.y = -((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(pointerNdc, camera);
+}
+function pickScenePoint(e){
+  setRay(e);
+  const hits = raycaster.intersectObjects(pickables, false);
+  if(hits.length) return hits[0].point.clone();
+  // 未命中任何表面时,回退到过当前点、面向相机的平面
+  const plane = new THREE.Plane();
+  const ref = state.points.length
+    ? new THREE.Vector3(...state.points[state.points.length-1])
+    : controls.target.clone();
+  plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), ref);
+  const out = new THREE.Vector3();
+  return raycaster.ray.intersectPlane(plane, out) ? out : null;
+}
+function pickMarker(e){
+  setRay(e);
+  const hits = raycaster.intersectObjects(markers, false);
+  return hits.length ? hits[0].object : null;
+}
+
+/* ============================================================
+ * 指针交互:点击添加 / 拖动微调 / 双击删除
+ * ==========================================================*/
+const canvas = renderer.domElement;
+let dragIndex = -1;
+let dragMoved = false;
+let downXY = null, activePointer = false, clickTimer = 0;
+
+canvas.addEventListener('pointerdown', e => {
+  if(e.button !== 0) return;
+  activePointer = true;
+  downXY = { x:e.clientX, y:e.clientY };
+  const m = pickMarker(e);
+  if(m){
+    dragIndex = m.userData.index;
+    dragMoved = false;
+    controls.enabled = false;
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if(dragIndex < 0) return;
+  const p = pickScenePoint(e);
+  if(!p) return;
+  if(!dragMoved){ dragMoved = true; pushHistory(); } // 实际移动才入撤销栈
+  state.points[dragIndex] = [p.x,p.y,p.z];
+  rebuildAll();           // 拖动联动:几何 + 遮挡 + 泛光(下一帧自动重算)
+  scheduleSave();
+});
+function endDrag(){
+  if(dragIndex >= 0){
+    dragIndex = -1;
+    controls.enabled = true;
+    if(dragMoved) rebuildMarkers();
+    saveState();
+  }
+}
+canvas.addEventListener('pointerup', e => {
+  if(dragIndex >= 0){ endDrag(); activePointer = false; return; }
+  if(!activePointer) return;
+  const moved = downXY && (Math.hypot(e.clientX-downXY.x, e.clientY-downXY.y) > 5);
+  activePointer = false;
+  if(moved){ clearTimeout(clickTimer); return; } // 轨道相机操作,取消加点
+  // 延迟添加,给 dblclick 留取消窗口
+  const ev = e;
+  clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => addPointAt(ev), 240);
+});
+canvas.addEventListener('pointercancel', () => { activePointer = false; endDrag(); });
+canvas.addEventListener('dblclick', e => {
+  clearTimeout(clickTimer);
+  const m = pickMarker(e);
+  if(m){ deletePoint(m.userData.index); }
+  else { addPointAt(e); } // 空白处双击视为单次添加
+});
+
+function addPointAt(e){
+  if(state.points.length >= MAX_POINTS){
+    toast(`控制点已达上限 ${MAX_POINTS} 个`, true); return;
+  }
+  const p = pickScenePoint(e);
+  if(!p) return;
+  pushHistory();
+  state.points.push([p.x,p.y,p.z]);
+  rebuildAll(); saveState();
+}
+function deletePoint(i){
+  pushHistory();
+  state.points.splice(i,1);
+  rebuildAll(); rebuildMarkers(); saveState();
+  toast(`已删除第 ${i+1} 个控制点`);
+}
+function undo(){
+  if(!history.length){ toast('没有可撤销的操作', true); return; }
+  state.points = history.pop();
+  rebuildAll(); rebuildMarkers(); saveState();
+}
+window.addEventListener('keydown', e => {
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); }
+});
+
+/* ============================================================
+ * UI 绑定
+ * ==========================================================*/
+const $ = id => document.getElementById(id);
+function toast(msg, isErr=false){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = isErr ? 'err' : '', 2200);
+}
+function updatePointChip(){
+  const chip = $('chipPoints');
+  chip.innerHTML = `控制点 <b>${state.points.length}/${MAX_POINTS}</b>`;
+  chip.className = 'chip' + (state.points.length >= MAX_POINTS ? ' warn' : '');
+}
+
+// 宽度档位
+document.querySelectorAll('#segWidth button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.widthLevel = +btn.dataset.v;
+    syncUI(); rebuildRibbon(); scheduleSave();
+  });
+});
+$('rIntensity').addEventListener('input', e => {
+  state.intensity = +e.target.value;
+  ribbonUniforms.uIntensity.value = state.intensity;
+  $('vIntensity').textContent = state.intensity.toFixed(2);
+  scheduleSave();
+});
+$('cStart').addEventListener('input', e => {
+  state.colorStart = e.target.value;
+  ribbonUniforms.uColorStart.value.set(state.colorStart);
+  refreshMarkers(); scheduleSave();
+});
+$('cEnd').addEventListener('input', e => {
+  state.colorEnd = e.target.value;
+  ribbonUniforms.uColorEnd.value.set(state.colorEnd);
+  refreshMarkers(); scheduleSave();
+});
+// 泛光参数:阈值改变时 UnrealBloomPass 下帧即按新阈值重算预滤波泛光
+$('rThreshold').addEventListener('input', e => {
+  state.bloomThreshold = +e.target.value;
+  bloomPass.threshold = state.bloomThreshold;
+  $('vThreshold').textContent = state.bloomThreshold.toFixed(2);
+  scheduleSave();
+});
+$('rBloom').addEventListener('input', e => {
+  state.bloomStrength = +e.target.value;
+  bloomPass.strength = state.bloomStrength;
+  $('vBloom').textContent = state.bloomStrength.toFixed(2);
+  scheduleSave();
+});
+$('rRadius').addEventListener('input', e => {
+  state.bloomRadius = +e.target.value;
+  bloomPass.radius = state.bloomRadius;
+  $('vRadius').textContent = state.bloomRadius.toFixed(2);
+  scheduleSave();
+});
+$('swOcclusion').addEventListener('change', e => {
+  state.occlusion = e.target.checked;
+  ribbonUniforms.uOcclusionOn.value = state.occlusion ? 1 : 0;
+  scheduleSave();
+});
+$('rOccl').addEventListener('input', e => {
+  state.occlusionFactor = +e.target.value;
+  ribbonUniforms.uOcclusionFactor.value = state.occlusionFactor;
+  $('vOccl').textContent = state.occlusionFactor.toFixed(2);
+  scheduleSave();
+});
+$('btnUndo').addEventListener('click', undo);
+$('btnClear').addEventListener('click', () => {
+  if(!state.points.length) return;
+  pushHistory();
+  state.points = [];
+  rebuildAll(); rebuildMarkers(); saveState();
+  toast('已清空全部控制点');
+});
+$('btnResetView').addEventListener('click', () => {
+  camera.position.set(26,20,30);
+  controls.target.set(0,1.5,0);
+  controls.update();
+});
+$('panelHead').addEventListener('click', e => {
+  if(e.target.id === 'collapseBtn'){
+    $('panel').classList.toggle('collapsed');
+    $('collapseBtn').textContent = $('panel').classList.contains('collapsed') ? '▲' : '▼';
+  }
+});
+
+function syncUI(){
+  document.querySelectorAll('#segWidth button').forEach(b =>
+    b.classList.toggle('on', +b.dataset.v === state.widthLevel));
+  $('rIntensity').value = state.intensity;
+  $('vIntensity').textContent = state.intensity.toFixed(2);
+  $('cStart').value = state.colorStart;
+  $('cEnd').value = state.colorEnd;
+  $('rThreshold').value = state.bloomThreshold;
+  $('vThreshold').textContent = state.bloomThreshold.toFixed(2);
+  $('rBloom').value = state.bloomStrength;
+  $('vBloom').textContent = state.bloomStrength.toFixed(2);
+  $('rRadius').value = state.bloomRadius;
+  $('vRadius').textContent = state.bloomRadius.toFixed(2);
+  $('swOcclusion').checked = state.occlusion;
+  $('rOccl').value = state.occlusionFactor;
+  $('vOccl').textContent = state.occlusionFactor.toFixed(2);
+
+  ribbonUniforms.uIntensity.value = state.intensity;
+  ribbonUniforms.uColorStart.value.set(state.colorStart);
+  ribbonUniforms.uColorEnd.value.set(state.colorEnd);
+  ribbonUniforms.uOcclusionOn.value = state.occlusion ? 1 : 0;
+  ribbonUniforms.uOcclusionFactor.value = state.occlusionFactor;
+  bloomPass.threshold = state.bloomThreshold;
+  bloomPass.strength = state.bloomStrength;
+  bloomPass.radius = state.bloomRadius;
+}
+
+/* ============================================================
+ * 导入 / 导出
+ * ==========================================================*/
+function exportData(){
+  const payload = {
+    app: 'parkour-lightpath-editor',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    params: { maxPoints:MAX_POINTS, subdivisions:SUBDIV, widthLevels:WIDTH_LEVELS },
+    state
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lightpath-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('参数文件已导出');
+}
+function importData(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      const s = data.state || data; // 兼容直接传 state 的文件
+      if(!Array.isArray(s.points)) throw new Error('缺少 points 数组');
+      if(s.points.length > MAX_POINTS) throw new Error(`控制点超过上限 ${MAX_POINTS}`);
+      if(!s.points.every(p => Array.isArray(p) && p.length===3 && p.every(Number.isFinite)))
+        throw new Error('控制点坐标格式不合法');
+      pushHistory();
+      state = Object.assign(defaultState(), s);
+      // 数值合法性兜底,避免异常参数破坏渲染
+      state.widthLevel = THREE.MathUtils.clamp(Math.round(state.widthLevel)||0, 0, 2);
+      ['intensity','bloomThreshold','bloomStrength','bloomRadius','occlusionFactor']
+        .forEach(k => { if(!Number.isFinite(state[k])) state[k] = defaultState()[k]; });
+      state.occlusion = !!state.occlusion;
+      state.colorStart = /^#[0-9a-f]{6}$/i.test(state.colorStart) ? state.colorStart : '#00e5ff';
+      state.colorEnd   = /^#[0-9a-f]{6}$/i.test(state.colorEnd)   ? state.colorEnd   : '#ff3df0';
+      syncUI(); rebuildAll(); rebuildMarkers(); saveState();
+      toast(`导入成功:${state.points.length} 个控制点`);
+    }catch(err){
+      toast('导入失败:' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+}
+$('btnExport').addEventListener('click', exportData);
+$('btnImport').addEventListener('click', () => $('fileImport').click());
+$('fileImport').addEventListener('change', e => {
+  if(e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = '';
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if(f && f.name.endsWith('.json')) importData(f);
+});
+
+/* ============================================================
+ * 尺寸自适应
+ * ==========================================================*/
+function onResize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+  composer.setSize(w,h);
+  const dw = renderer.domElement.width, dh = renderer.domElement.height;
+  depthTarget.setSize(dw, dh);
+  ribbonUniforms.uResolution.value.set(dw, dh);
+}
+window.addEventListener('resize', onResize);
+
+/* ============================================================
+ * 主循环:先渲染深度通道 → 再走泛光后处理
+ * ==========================================================*/
+const fpsChip = $('chipFps').querySelector('b');
+let frames = 0, fpsTimer = performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+
+  // 1) 深度通道:仅遮挡物层,输出带 DepthTexture 的 RenderTarget
+  depthCamera.position.copy(camera.position);
+  depthCamera.quaternion.copy(camera.quaternion);
+  depthCamera.projectionMatrix.copy(camera.projectionMatrix);
+  depthCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+  scene.overrideMaterial = depthMaterial;
+  renderer.setRenderTarget(depthTarget);
+  renderer.clear();
+  renderer.render(scene, depthCamera);
+  renderer.setRenderTarget(null);
+  scene.overrideMaterial = null;
+
+  // 2) 主通道 + UnrealBloom 泛光 + 输出(光带 shader 采样深度纹理做遮挡压暗)
+  composer.render();
+
+  frames++;
+  const now = performance.now();
+  if(now - fpsTimer >= 500){
+    const fps = Math.round(frames * 1000 / (now - fpsTimer));
+    fpsChip.textContent = fps;
+    fpsChip.parentElement.className = 'chip ' + (fps >= 55 ? 'good' : fps >= 30 ? 'warn' : 'danger');
+    frames = 0; fpsTimer = now;
+  }
+}
+
+/* ============================================================
+ * 启动
+ * ==========================================================*/
+loadState();
+syncUI();
+rebuildAll();
+rebuildMarkers();
+onResize();
+saveState();
+animate();
+
+// 调试 / 自动化测试句柄(不影响正常使用):便于外部精确控制相机与读取状态
+window.__editor = {
+  scene, camera, controls, ribbon, ribbonUniforms,
+  get state(){ return state; },
+  setView(pos, target){
+    camera.position.set(...pos);
+    controls.target.set(...target);
+    controls.update();
+  },
+  addPoint(x,y,z){
+    if(state.points.length >= MAX_POINTS) return false;
+    state.points.push([x,y,z]);
+    rebuildAll(); saveState();
+    return true;
+  },
+  get ribbonVertexCount(){ return ribbon.geometry.attributes.position
+    ? ribbon.geometry.attributes.position.count : 0; }
+};
+</script>
+</body>
+</html>
