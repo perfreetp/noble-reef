@@ -1,0 +1,41 @@
+{
+  "name": "figure-parting-studio",
+  "version": "1.0.0",
+  "description": "BVH-accelerated figure parting, tenon and shell workbench",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/perfreetp/noble-reef.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/perfreetp/noble-reef/issues"
+  },
+  "homepage": "https://github.com/perfreetp/noble-reef#readme",
+  "dependencies": {
+    "earcut": "^3.2.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.187.0",
+    "three-bvh-csg": "^0.0.19",
+    "three-mesh-bvh": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/earcut": "^3.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "puppeteer-core": "^25.18.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
