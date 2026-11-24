@@ -1,0 +1,21 @@
+{
+  "name": "fengguan-pearl-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "凤冠头面珠光层叠合成工具 — 原生 TypeScript + Web Components + PixiJS WebGPU",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "selftest": "node --experimental-strip-types --import ./tools/ts-loader.mjs tools/selftest.ts"
+  },
+  "dependencies": {
+    "pixi.js": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
